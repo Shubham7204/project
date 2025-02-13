@@ -16,13 +16,9 @@ router.get('/', auth, async (req, res) => {
       // Get URLs from contexts in learningData
       const learningDataUrls = category.learningData
         .flatMap(data => 
-          data.contexts?.map(context => {
-            // Extract URLs from context text
-            const urlMatch = context.text.match(/(https?:\/\/[^\s]+)/);
-            return urlMatch ? urlMatch[0] : null;
-          })
+          data.context?.urls || []
         )
-        .filter(Boolean); // Remove null values
+        .filter(Boolean);
 
       // Ensure unique URLs
       const uniqueUrls = [...new Set([
@@ -48,7 +44,6 @@ router.get('/', auth, async (req, res) => {
         learnedUrls: learningDataUrls,
         baseKeywords: category.baseKeywords || [],
         learnedKeywordsList: uniqueLearnedKeywords,
-        // Additional learning stats
         topKeywords: category.learningData
           .sort((a, b) => b.frequency - a.frequency)
           .slice(0, 5)
@@ -60,6 +55,7 @@ router.get('/', auth, async (req, res) => {
       };
     });
 
+    console.log('Sending stats:', stats); // Debug log
     res.json(stats);
   } catch (error) {
     console.error('Stats error:', error);

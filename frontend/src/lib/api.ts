@@ -9,7 +9,7 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     throw new Error('AUTH_REQUIRED');
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
     ...options,
     headers: {
       ...options.headers,
@@ -18,17 +18,15 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     },
   });
 
-  if (response.status === 401) {
-    localStorage.removeItem('token');
-    throw new Error('AUTH_REQUIRED');
-  }
-
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'API request failed');
+    if (response.status === 401) {
+      throw new Error('AUTH_REQUIRED');
+    }
+    throw new Error(`API Error: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return data;
 }
 
 // Auth endpoints
@@ -77,12 +75,23 @@ export async function getSessions(): Promise<Session[]> {
 
 // Category endpoints
 export async function getCategories(): Promise<ContentCategory[]> {
-  return fetchWithAuth('/categories');
+  const response = await fetchWithAuth('/api/dashboard/categories');
+  return response;
 }
 
 // Dashboard endpoints
 export async function getDashboardStats(): Promise<CategoryStats[]> {
-  return fetchWithAuth('/dashboard/stats');
+  try {
+    const response = await fetchWithAuth('/api/dashboard');
+    console.log('Raw API response:', response);
+    if (!Array.isArray(response)) {
+      throw new Error('Invalid response format');
+    }
+    return response;
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    throw error;
+  }
 }
 
 export async function getCategoryLearningData(categoryId: string): Promise<CategoryLearningData> {

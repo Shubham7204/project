@@ -1,14 +1,21 @@
 export interface CategoryStats {
   name: string;
+  description: string;
   totalKeywords: number;
   learnedKeywords: number;
   lastUpdated: string;
-  allKeywords: string[];
+  totalDocuments: number;
+  averageConfidence: number;
   urls: string[];
   baseUrls: string[];
   learnedUrls: string[];
   baseKeywords: string[];
   learnedKeywordsList: string[];
+  topKeywords?: {
+    keyword: string;
+    frequency: number;
+    confidence: number;
+  }[];
 }
 
 export interface CategoryLearningData {

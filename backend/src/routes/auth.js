@@ -1,11 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Sign up
 router.post('/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -18,6 +18,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// Sign in
 router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -29,6 +30,7 @@ router.post('/signin', async (req, res) => {
   }
 });
 
+// Sign out
 router.post('/signout', auth, async (req, res) => {
   try {
     req.user.tokens = req.user.tokens.filter(token => token.token !== req.token);
