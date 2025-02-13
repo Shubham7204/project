@@ -1,49 +1,55 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { Auth } from './components/Auth';
-import { Layout } from './components/Layout';
-import { ContentAnalysis } from './components/ContentAnalysis';
-import { DashboardTable } from './components/DashboardTable';
-import { useAuth } from './hooks/useAuth';
-import { useAnalysis } from './hooks/useAnalysis';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './contexts/AuthContext';
+import { Navbar } from './components/Navbar';
+import { Footer } from './components/Footer';
+import { Landing } from './pages/Landing';
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { Upload } from './pages/Upload';
+import { History } from './pages/History';
+import { PrivateRoute } from './components/PrivateRoute';
 
-function App() {
-  const { isAuthenticated, setIsAuthenticated, handleSignOut } = useAuth();
-  const { report, isAnalyzing, currentContent, handleAnalysis } = useAnalysis(() => {});
-  const [expandedUrl, setExpandedUrl] = React.useState<string | null>(null);
-
+export default function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100">
-        {!isAuthenticated ? (
-          <Auth onAuth={() => setIsAuthenticated(true)} />
-        ) : (
-          <Routes>
-            <Route path="/" element={
-              <Layout title="Content Analysis" onSignOut={handleSignOut}>
-                <ContentAnalysis
-                  onDrop={handleAnalysis}
-                  isAnalyzing={isAnalyzing}
-                  currentContent={currentContent}
-                  report={report}
-                  expandedUrl={expandedUrl}
-                  toggleUrlExpansion={(url) => setExpandedUrl(expandedUrl === url ? null : url)}
-                />
-              </Layout>
-            } />
-
-            <Route path="/dashboard" element={
-              <Layout title="Dashboard">
-                <DashboardTable />
-              </Layout>
-            } />
-
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        )}
-      </div>
+      <AuthProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Navbar />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/upload"
+                element={
+                  <PrivateRoute>
+                    <Upload />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <PrivateRoute>
+                    <History />
+                  </PrivateRoute>
+                }
+              />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+        <Toaster position="top-right" />
+      </AuthProvider>
     </Router>
   );
 }
-
-export default App;

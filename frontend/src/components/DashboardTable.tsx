@@ -1,189 +1,216 @@
 import React, { useState, useEffect } from 'react';
 import { getDashboardStats } from '../lib/api';
-import { ChevronDown, ChevronUp, ExternalLink, Clock, Tag } from 'lucide-react';
-import type { CategoryStats } from '../types';
+import type { CategoryStats } from '../types/dashboard';
+import { FiBook, FiLink, FiTrendingUp, FiCalendar, FiDatabase } from 'react-icons/fi';
+
+const BRUTALIST_COLORS = [
+  'bg-yellow-400',
+  'bg-pink-400',
+  'bg-blue-400',
+  'bg-green-400',
+  'bg-purple-400'
+];
 
 export function DashboardTable() {
   const [stats, setStats] = useState<CategoryStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadDashboardStats();
-  }, []);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const loadDashboardStats = async () => {
     try {
-      setLoading(true);
-      setError(null);
       const data = await getDashboardStats();
-      console.log('Processed dashboard stats:', data);
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid data format received');
-      }
       setStats(data);
-    } catch (error) {
-      console.error('Failed to load dashboard stats:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load data');
+      if (data.length > 0) setSelectedCategory(data[0].name);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load dashboard stats');
+      console.error('Failed to load dashboard stats:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleCategory = (categoryName: string) => {
-    setExpandedCategory(expandedCategory === categoryName ? null : categoryName);
-  };
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin rounded-lg h-16 w-16 border-8 border-black border-t-yellow-400"></div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="text-black p-6 bg-red-300 rounded-lg border-4 border-black shadow-brutal">
+      {error}
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="text-center py-8 text-red-600">
-        <p>Error loading dashboard data: {error}</p>
-        <button 
-          onClick={loadDashboardStats}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (!stats.length) {
-    return (
-      <div className="text-center py-8 text-gray-600">
-        No data available
-      </div>
-    );
-  }
+  const selectedCategoryData = stats.find(cat => cat.name === selectedCategory);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Category
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Base Keywords
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Learned Keywords
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              URLs Found
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Last Updated
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {stats.map((category) => (
-            <React.Fragment key={category.name}>
-              <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleCategory(category.name)}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    {expandedCategory === category.name ? 
-                      <ChevronUp className="h-5 w-5 text-gray-400 mr-2" /> : 
-                      <ChevronDown className="h-5 w-5 text-gray-400 mr-2" />
-                    }
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{category.name}</div>
-                      <div className="text-sm text-gray-500">{category.description}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{category.baseKeywords?.length || 0}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{category.learnedKeywordsList?.length || 0}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">{category.urls?.length || 0}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {new Date(category.lastUpdated).toLocaleDateString()}
-                  </div>
-                </td>
-              </tr>
-              
-              {expandedCategory === category.name && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Base Keywords Section */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Base Keywords</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {category.baseKeywords?.map((keyword, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                            >
-                              <Tag className="h-3 w-3 mr-1" />
-                              {keyword}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Learned Keywords Section */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Learned Keywords</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {category.learnedKeywordsList?.map((keyword, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                            >
-                              <Tag className="h-3 w-3 mr-1" />
-                              {keyword}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* URLs Section */}
-                      {category.urls && category.urls.length > 0 && (
-                        <div className="md:col-span-2">
-                          <h4 className="font-medium text-gray-900 mb-3">URLs Found</h4>
-                          <div className="space-y-2">
-                            {category.urls.map((url, idx) => (
-                              <a
-                                key={idx}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                              >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                {url}
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </React.Fragment>
+    <div className="bg-white rounded-lg border-4 border-black shadow-brutal">
+      {/* Category Navigation */}
+      <div className="border-b-4 border-black bg-gray-100">
+        <nav className="flex overflow-x-auto py-6 px-8">
+          {stats.map((category, idx) => (
+            <button
+              key={category.name}
+              onClick={() => setSelectedCategory(category.name)}
+              className={`
+                whitespace-nowrap px-6 py-3 rounded-lg mr-4 text-base font-bold 
+                transition-transform hover:-translate-y-1 hover:shadow-brutal-sm
+                border-4 border-black transform 
+                ${selectedCategory === category.name 
+                  ? `${BRUTALIST_COLORS[idx % BRUTALIST_COLORS.length]} shadow-brutal-sm -translate-y-1` 
+                  : 'bg-white hover:bg-gray-50'}`}
+            >
+              {category.name}
+            </button>
           ))}
-        </tbody>
-      </table>
+        </nav>
+      </div>
+
+      {selectedCategoryData && (
+        <div className="p-8">
+          {/* Category Header */}
+          <div className="mb-8 p-6 bg-yellow-300 rounded-lg border-4 border-black shadow-brutal">
+            <h2 className="text-3xl font-black text-black">{selectedCategoryData.name}</h2>
+            <p className="text-black mt-2 font-medium">{selectedCategoryData.description}</p>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard
+              icon={<FiBook className="w-6 h-6" />}
+              title="Total Keywords"
+              value={selectedCategoryData.totalKeywords}
+              subtitle={`${selectedCategoryData.learnedKeywords} learned`}
+              color="bg-pink-300"
+            />
+            <StatCard
+              icon={<FiLink className="w-6 h-6" />}
+              title="Total URLs"
+              value={selectedCategoryData.urls.length}
+              subtitle={`${selectedCategoryData.learnedUrls.length} learned`}
+              color="bg-blue-300"
+            />
+            <StatCard
+              icon={<FiTrendingUp className="w-6 h-6" />}
+              title="Confidence"
+              value={`${Math.round(selectedCategoryData.averageConfidence * 100)}%`}
+              subtitle="Average score"
+              color="bg-green-300"
+            />
+            <StatCard
+              icon={<FiDatabase className="w-6 h-6" />}
+              title="Documents"
+              value={selectedCategoryData.totalDocuments}
+              subtitle={`Last updated ${new Date(selectedCategoryData.lastUpdated).toLocaleDateString()}`}
+              color="bg-purple-300"
+            />
+          </div>
+
+          {/* Keywords and URLs Sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Keywords Section */}
+            <div className="bg-blue-200 rounded-lg border-4 border-black p-6 shadow-brutal">
+              <h3 className="text-xl font-black text-black mb-4">Keywords</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-black mb-3">Base Keywords</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCategoryData.baseKeywords.map(keyword => (
+                      <span key={keyword} 
+                        className="px-4 py-2 bg-white text-black rounded-lg border-2 border-black 
+                          text-sm font-bold shadow-brutal-sm hover:-translate-y-1 transition-transform">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-black mb-3">Learned Keywords</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCategoryData.learnedKeywordsList.map(keyword => (
+                      <span key={keyword} 
+                        className="px-4 py-2 bg-green-300 text-black rounded-lg border-2 border-black 
+                          text-sm font-bold shadow-brutal-sm hover:-translate-y-1 transition-transform">
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* URLs Section */}
+            <div className="bg-pink-200 rounded-lg border-4 border-black p-6 shadow-brutal">
+              <h3 className="text-xl font-black text-black mb-4">URLs</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-black mb-3">Base URLs</h4>
+                  <div className="space-y-2">
+                    {selectedCategoryData.baseUrls.map(url => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block px-4 py-2 bg-white text-black rounded-lg border-2 border-black 
+                          text-sm font-bold shadow-brutal-sm hover:-translate-y-1 transition-transform"
+                      >
+                        {url}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-black mb-3">Learned URLs</h4>
+                  <div className="space-y-2">
+                    {selectedCategoryData.learnedUrls.map(url => (
+                      <a
+                        key={url}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block px-4 py-2 bg-green-300 text-black rounded-lg border-2 border-black 
+                          text-sm font-bold shadow-brutal-sm hover:-translate-y-1 transition-transform"
+                      >
+                        {url}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  subtitle: string;
+  color: string;
+}
+
+function StatCard({ icon, title, value, subtitle, color }: StatCardProps) {
+  return (
+    <div className={`${color} p-6 rounded-lg border-4 border-black shadow-brutal hover:-translate-y-1 transition-transform`}>
+      <div className="flex items-center space-x-3 text-black mb-2">
+        {icon}
+        <h3 className="text-sm font-bold">{title}</h3>
+      </div>
+      <div className="mt-2">
+        <div className="text-3xl font-black text-black">{value}</div>
+        <div className="text-sm font-bold text-black/70">{subtitle}</div>
+      </div>
     </div>
   );
 } 

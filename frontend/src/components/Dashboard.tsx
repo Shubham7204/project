@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Brain, Clock, Database, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { getDashboardStats, getCategoryLearningData } from '../lib/api';
 import type { CategoryStats, CategoryLearningData } from '../types/dashboard';
 
@@ -8,26 +10,34 @@ export function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [learningData, setLearningData] = useState<CategoryLearningData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    const loadDashboardStats = async () => {
+      try {
+        const data = await getDashboardStats();
+        setStats(data);
+      } catch (error) {
+        console.error('Failed to load dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadDashboardStats();
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     if (selectedCategory) {
       loadCategoryData(selectedCategory);
     }
   }, [selectedCategory]);
-
-  const loadDashboardStats = async () => {
-    try {
-      const data = await getDashboardStats();
-      setStats(data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to load dashboard stats:', error);
-    }
-  };
 
   const loadCategoryData = async (categoryId: string) => {
     try {

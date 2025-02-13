@@ -1,37 +1,36 @@
 import type { ContentCategory, AnalysisReport, Session, CategoryStats } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Helper function for API requests
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem('token');
-  if (!token) {
-    throw new Error('AUTH_REQUIRED');
-  }
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
+  };
 
-  const response = await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {
+  const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
   });
 
   if (!response.ok) {
+    const error = await response.json();
     if (response.status === 401) {
-      throw new Error('AUTH_REQUIRED');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
     }
-    throw new Error(`API Error: ${response.status}`);
+    throw new Error(error.message || 'API request failed');
   }
 
-  const data = await response.json();
-  return data;
+  return response.json();
 }
 
 // Auth endpoints
 export async function signUp(email: string, password: string) {
-  const response = await fetch(`${API_URL}/auth/signup`, {
+  const response = await fetch(`${API_URL}/api/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -39,12 +38,13 @@ export async function signUp(email: string, password: string) {
 
   const data = await response.json();
   if (!response.ok) throw new Error(data.message);
+  
   localStorage.setItem('token', data.token);
   return data;
 }
 
 export async function signIn(email: string, password: string) {
-  const response = await fetch(`${API_URL}/auth/signin`, {
+  const response = await fetch(`${API_URL}/api/auth/signin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -52,12 +52,13 @@ export async function signIn(email: string, password: string) {
 
   const data = await response.json();
   if (!response.ok) throw new Error(data.message);
+  
   localStorage.setItem('token', data.token);
   return data;
 }
 
 export async function signOut() {
-  await fetchWithAuth('/auth/signout', { method: 'POST' });
+  await fetchWithAuth('/api/auth/signout', { method: 'POST' });
   localStorage.removeItem('token');
 }
 
@@ -70,28 +71,17 @@ export async function saveSession(content: string, report: AnalysisReport): Prom
 }
 
 export async function getSessions(): Promise<Session[]> {
-  return fetchWithAuth('/sessions');
+  return fetchWithAuth('/api/sessions');
 }
 
 // Category endpoints
 export async function getCategories(): Promise<ContentCategory[]> {
-  const response = await fetchWithAuth('/api/dashboard/categories');
-  return response;
+  return fetchWithAuth('/api/categories');
 }
 
 // Dashboard endpoints
 export async function getDashboardStats(): Promise<CategoryStats[]> {
-  try {
-    const response = await fetchWithAuth('/api/dashboard');
-    console.log('Raw API response:', response);
-    if (!Array.isArray(response)) {
-      throw new Error('Invalid response format');
-    }
-    return response;
-  } catch (error) {
-    console.error('Dashboard stats error:', error);
-    throw error;
-  }
+  return fetchWithAuth('/api/dashboard');
 }
 
 export async function getCategoryLearningData(categoryId: string): Promise<CategoryLearningData> {

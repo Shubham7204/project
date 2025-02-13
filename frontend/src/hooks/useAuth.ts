@@ -19,7 +19,9 @@ export function useAuth() {
       localStorage.removeItem('token');
       toast.success('Signed out successfully');
     } catch (error) {
-      toast.error('Error signing out');
+      localStorage.removeItem('token');
+      setIsAuthenticated(false);
+      toast.error('Signed out due to error');
     }
   };
 

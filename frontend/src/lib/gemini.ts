@@ -13,42 +13,52 @@ export async function analyzeContent(text: string, categories: ContentCategory[]
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     const urls = extractUrls(text);
 
-    const prompt = `Analyze this content and provide a JSON response:
+    const prompt = `Analyze this content and categorize keywords and URLs:
 
     Content: "${text}"
 
-    ${urls.length > 0 ? `URLs: ${urls.join(', ')}` : ''}
-
     Available Categories:
-    ${categories.map(cat => `- ${cat.name}: ${cat.description}`).join('\n')}
+    ${categories.map(cat => `
+    - ${cat.name}:
+      Description: ${cat.description}
+      Base Keywords: ${cat.baseKeywords.join(', ')}
+      Base URLs: ${cat.baseUrls.join(', ')}
+    `).join('\n')}
+
+    Task:
+    1. Extract and categorize new keywords that aren't in the base keywords
+    2. Analyze and categorize URLs based on their content and relevance
+    3. Provide confidence scores for each categorization
 
     Return a JSON object with:
-    - Category matches with scores
-    - Key concepts and keywords
-    - URL analysis if any URLs are found
-    - Any concerns or recommendations
-
-    Format:
     {
       "categories": [
         {
           "category": "categoryName",
           "score": number,
           "percentage": number,
-          "matchedKeywords": ["keyword1", "keyword2"]
+          "matchedBaseKeywords": ["keyword1"],
+          "newKeywords": [
+            {
+              "keyword": "string",
+              "confidence": number,
+              "relevance": "explanation of why this keyword belongs here"
+            }
+          ],
+          "matchedBaseUrls": ["url1"],
+          "newUrls": [
+            {
+              "url": "string",
+              "confidence": number,
+              "relevance": "explanation of why this URL belongs here"
+            }
+          ]
         }
       ],
-      "keywords": ["keyword1", "keyword2"],
-      "urls": [
-        {
-          "url": "url",
-          "title": "title",
-          "keywords": ["keyword1", "keyword2"],
-          "summary": "brief summary"
-        }
-      ],
-      "concerns": ["concern1", "concern2"],
-      "recommendations": ["rec1", "rec2"]
+      "uncategorizedKeywords": ["keyword1"],
+      "uncategorizedUrls": ["url1"],
+      "concerns": ["concern1"],
+      "recommendations": ["rec1"]
     }`;
 
     const result = await model.generateContent(prompt);
@@ -65,14 +75,30 @@ export async function analyzeContent(text: string, categories: ContentCategory[]
       const parsedResponse = JSON.parse(cleanedResponse);
       
       return {
-        categories: parsedResponse.categories || [],
-        keywords: parsedResponse.keywords || [],
-        urls: parsedResponse.urls || [],
+        categories: parsedResponse.categories.map(cat => ({
+          ...cat,
+          matchedKeywords: [...cat.matchedBaseKeywords, ...cat.newKeywords.map(k => k.keyword)],
+          urls: [...cat.matchedBaseUrls, ...cat.newUrls.map(u => u.url)]
+        })),
+        keywords: [...new Set([
+          ...parsedResponse.categories.flatMap(c => c.newKeywords.map(k => k.keyword)),
+          ...parsedResponse.uncategorizedKeywords
+        ])],
+        urls: parsedResponse.categories.flatMap(c => 
+          c.newUrls.map(u => ({
+            url: u.url,
+            category: c.category,
+            confidence: u.confidence,
+            relevance: u.relevance
+          }))
+        ),
         concerns: parsedResponse.concerns || [],
         recommendations: parsedResponse.recommendations || [],
         learningProgress: {
-          newKeywords: 0,
-          categoriesUpdated: 0
+          newKeywords: parsedResponse.categories.reduce((acc, cat) => 
+            acc + cat.newKeywords.length, 0
+          ),
+          categoriesUpdated: parsedResponse.categories.length
         }
       };
     } catch (parseError) {

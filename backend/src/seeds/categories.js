@@ -11,48 +11,56 @@ const categories = [
       'blockchain',
       'cloud computing',
       'cybersecurity',
-      'data science'
+      'data science',
+      'IoT'
     ],
     baseUrls: [
-      'https://www.tensorflow.org',
-      'https://aws.amazon.com/machine-learning',
-      'https://cloud.google.com/ai-platform'
-    ],
-    learningData: []
+      'https://techcrunch.com',
+      'https://wired.com',
+      'https://github.com',
+      'https://developer.mozilla.org',
+      'https://aws.amazon.com'
+    ]
   },
   {
     name: 'Business & Finance',
     description: 'Content about business strategy, finance, and market analysis',
     baseKeywords: [
       'market analysis',
-      'investment strategy',
-      'financial planning',
-      'risk management',
-      'business development'
+      'investment',
+      'startup',
+      'entrepreneurship',
+      'finance',
+      'economics',
+      'strategy'
     ],
     baseUrls: [
-      'https://www.bloomberg.com',
-      'https://www.investopedia.com',
-      'https://www.ft.com'
-    ],
-    learningData: []
+      'https://bloomberg.com',
+      'https://forbes.com',
+      'https://wsj.com',
+      'https://finance.yahoo.com',
+      'https://investopedia.com'
+    ]
   },
   {
-    name: 'Healthcare & Medical',
-    description: 'Medical research, healthcare technology, and patient care',
+    name: 'Health & Medicine',
+    description: 'Medical research, healthcare, and wellness content',
     baseKeywords: [
       'medical research',
-      'healthcare technology',
-      'patient care',
+      'healthcare',
       'clinical trials',
-      'digital health'
+      'wellness',
+      'medicine',
+      'public health',
+      'nutrition'
     ],
     baseUrls: [
-      'https://www.who.int',
-      'https://www.nih.gov',
-      'https://www.mayoclinic.org'
-    ],
-    learningData: []
+      'https://who.int',
+      'https://nih.gov',
+      'https://mayoclinic.org',
+      'https://webmd.com',
+      'https://medlineplus.gov'
+    ]
   },
   {
     name: 'Environmental & Sustainability',
@@ -116,20 +124,21 @@ const categories = [
   }
 ];
 
-async function seedCategories() {
+const seedCategories = async () => {
   try {
     // Clear existing categories
     await Category.deleteMany({});
-    
+
     // Add metadata to each category
     const categoriesWithMetadata = categories.map(category => ({
       ...category,
       metadata: {
         totalDocuments: 0,
         lastUpdated: new Date(),
-        averageConfidence: 0,
-        version: '1.0'
-      }
+        averageConfidence: 0
+      },
+      learningData: [],
+      urlLearningData: []
     }));
 
     // Insert new categories
@@ -139,6 +148,6 @@ async function seedCategories() {
     console.error('Error seeding categories:', error);
     throw error;
   }
-}
+};
 
 module.exports = seedCategories; 

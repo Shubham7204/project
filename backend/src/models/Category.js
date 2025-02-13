@@ -36,10 +36,22 @@ const categorySchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     },
-    context: {
+    contexts: [{
       text: String,
-      urls: [String]
-    }
+      relevance: String,
+      timestamp: { type: Date, default: Date.now }
+    }]
+  }],
+  urlLearningData: [{
+    url: String,
+    frequency: { type: Number, default: 1 },
+    confidence: Number,
+    lastUsed: { type: Date, default: Date.now },
+    contexts: [{
+      text: String,
+      relevance: String,
+      timestamp: { type: Date, default: Date.now }
+    }]
   }],
   metadata: {
     totalDocuments: {
@@ -58,35 +70,67 @@ const categorySchema = new mongoose.Schema({
 });
 
 // Method to update learning data
-categorySchema.methods.updateLearningData = async function(keywords, context) {
+categorySchema.methods.updateLearningData = async function(newKeywords, newUrls) {
   const now = new Date();
-  
-  // Update existing keywords
-  keywords.forEach(keyword => {
-    const existingKeyword = this.learningData.find(k => k.keyword.toLowerCase() === keyword.toLowerCase());
+
+  // Update keywords
+  for (const newKeyword of newKeywords) {
+    const existingKeyword = this.learningData.find(k => k.keyword === newKeyword.keyword);
     
     if (existingKeyword) {
       existingKeyword.frequency += 1;
+      existingKeyword.confidence = (existingKeyword.confidence + newKeyword.confidence) / 2;
       existingKeyword.lastUsed = now;
-      existingKeyword.confidence = Math.min(existingKeyword.confidence + 0.1, 1);
-      existingKeyword.context = context;
+      existingKeyword.contexts.push({
+        text: newKeyword.context.text,
+        relevance: newKeyword.context.relevance,
+        timestamp: now
+      });
     } else {
       this.learningData.push({
-        keyword,
-        frequency: 1,
-        confidence: 0.5,
-        lastUsed: now,
-        context
+        ...newKeyword,
+        contexts: [{
+          text: newKeyword.context.text,
+          relevance: newKeyword.context.relevance,
+          timestamp: now
+        }]
       });
     }
-  });
+  }
+
+  // Update URLs
+  for (const newUrl of newUrls) {
+    const existingUrl = this.urlLearningData.find(u => u.url === newUrl.url);
+    
+    if (existingUrl) {
+      existingUrl.frequency += 1;
+      existingUrl.confidence = (existingUrl.confidence + newUrl.confidence) / 2;
+      existingUrl.lastUsed = now;
+      existingUrl.contexts.push({
+        text: newUrl.context.text,
+        relevance: newUrl.context.relevance,
+        timestamp: now
+      });
+    } else {
+      this.urlLearningData.push({
+        ...newUrl,
+        contexts: [{
+          text: newUrl.context.text,
+          relevance: newUrl.context.relevance,
+          timestamp: now
+        }]
+      });
+    }
+  }
 
   // Update metadata
   this.metadata.totalDocuments += 1;
   this.metadata.lastUpdated = now;
-  this.metadata.averageConfidence = this.learningData.reduce((sum, k) => sum + k.confidence, 0) / this.learningData.length;
+  this.metadata.averageConfidence = this.learningData.reduce(
+    (acc, curr) => acc + curr.confidence, 0
+  ) / this.learningData.length;
 
-  return this.save();
+  await this.save();
 };
 
 module.exports = mongoose.model('Category', categorySchema); 

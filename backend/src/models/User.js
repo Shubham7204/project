@@ -17,21 +17,18 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  tokens: [{
-    token: {
-      type: String,
-      required: true
-    }
-  }]
+  }
 });
 
-// Add methods to the schema
+// Simplified token generation
 userSchema.methods.generateAuthToken = async function() {
   const user = this;
-  const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-  user.tokens = user.tokens.concat({ token });
-  await user.save();
+  // Extended token expiration to 30 days
+  const token = jwt.sign(
+    { userId: user._id }, 
+    process.env.JWT_SECRET, 
+    { expiresIn: '30d' }
+  );
   return token;
 };
 

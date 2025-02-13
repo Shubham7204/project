@@ -62,13 +62,27 @@ router.post('/', auth, async (req, res) => {
     await Promise.all(report.categories.map(async (categoryMatch) => {
       const category = categories.find(c => c.name === categoryMatch.category);
       if (category) {
-        await category.updateLearningData(
-          categoryMatch.matchedKeywords,
-          {
+        // Update with new keywords and their metadata
+        const newKeywords = categoryMatch.newKeywords.map(k => ({
+          keyword: k.keyword,
+          confidence: k.confidence,
+          context: {
             text: content.substring(0, 200),
-            urls: report.urls.map(u => u.url)
+            relevance: k.relevance
           }
-        );
+        }));
+
+        // Update with new URLs and their metadata
+        const newUrls = categoryMatch.newUrls.map(u => ({
+          url: u.url,
+          confidence: u.confidence,
+          context: {
+            text: content.substring(0, 200),
+            relevance: u.relevance
+          }
+        }));
+
+        await category.updateLearningData(newKeywords, newUrls);
       }
     }));
 
